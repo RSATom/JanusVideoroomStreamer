@@ -1,0 +1,16 @@
+janus: {
+#  url: "wss://janus.conf.meetecho.com/ws"
+#  room: 1234
+  display: "Videorom Client"
+}
+
+streamer: {
+  type: "test"
+  videocodec: "vp8"
+  uri: "bars"
+}
+
+debug: {
+#  log-level: 3
+#  lws-log-level: 2
+}
