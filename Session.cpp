@@ -360,8 +360,24 @@ bool Session::handleTrickleReply(const JsonPtr& jsonMessagePtr)
     return true;
 }
 
-bool Session::handleEvent(const JsonPtr& jsonMessage)
+bool Session::handleEvent(const JsonPtr& jsonMessagePtr)
 {
+    json_t* jsonMessage = jsonMessagePtr.get();
+
+    const std::string janus = ExtractJanus(jsonMessagePtr);
+
+    if(janus == "trickle") {
+        json_t* candidateJson = json_object_get(jsonMessage, "candidate");
+
+        json_int_t mLineIndex = ExtractInt(candidateJson, "sdpMLineIndex");
+        std::string candidate = ExtractString(candidateJson, "candidate");
+
+        if(!_streamerPtr)
+            return false;
+
+        _streamerPtr->addIceCandidate(mLineIndex, candidate);
+    }
+
     return true;
 }
 
