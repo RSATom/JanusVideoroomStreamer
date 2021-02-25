@@ -6,6 +6,7 @@
 
 #include "CxxPtr/libwebsocketsPtr.h"
 #include "CxxPtr/JanssonPtr.h"
+#include "CxxPtr/GlibPtr.h"
 
 #include "Common/MessageBuffer.h"
 #include "Common/LwsSource.h"
@@ -279,24 +280,50 @@ void WsClient::Private::connect()
         return;
     }
 
+    bool useSecureConnection = true;
+
+    std::vector<char> urlBuffer;
+    urlBuffer.reserve(config.janusUrl.size() + 1);
+    urlBuffer.assign(config.janusUrl.begin(), config.janusUrl.end());
+    urlBuffer.push_back('\0');
+
+    const char* prot;
+    const char* ads;
+    int port;
+    const char* path;
+
+    if(0 != lws_parse_uri(urlBuffer.data(), &prot, &ads, &port, &path)) {
+        Log()->error("Invalid URL.");
+        return;
+    }
+
+    if(0 == strcmp(prot, "ws"))
+        useSecureConnection = false;
+    else if(0 == strcmp(prot, "wss"))
+        useSecureConnection = true;
+    else {
+        Log()->error("Only \"ws://\" or \"wss://\" URLs are supported.");
+        return;
+    }
+
+    if(port <= 0) {
+        if(useSecureConnection)
+            port = 443;
+        else
+            port = 80;
+    }
+
     Log()->info("Connecting to {}...", config.janusUrl);
 
     struct lws_client_connect_info connectInfo = {};
     connectInfo.context = contextPtr.get();
-    if(1) {
-        connectInfo.address = "janus.conf.meetecho.com";
-        connectInfo.host = "janus.conf.meetecho.com";
-        connectInfo.port = 443;
-        connectInfo.path = "/ws";
-    } else {
-        connectInfo.address = "staging.janus.alo.ai";
-        connectInfo.host = "staging.janus.alo.ai";
-        connectInfo.port = 8989;
-        connectInfo.path = "/";
-    }
+    connectInfo.address = ads;
+    connectInfo.host = ads;
+    connectInfo.port = port;
+    connectInfo.path = path;
 
-
-    connectInfo.ssl_connection = LCCSCF_USE_SSL;
+    if(useSecureConnection)
+        connectInfo.ssl_connection = LCCSCF_USE_SSL;
     connectInfo.protocol = "janus-protocol";
 
     connection = lws_client_connect_via_info(&connectInfo);
