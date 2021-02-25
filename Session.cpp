@@ -36,9 +36,9 @@ inline std::string ExtractTransaction(const JsonPtr& jsonMessagePtr)
     return ExtractString(jsonMessagePtr.get(), "transaction");
 }
 
-inline std::string ExtractSession(const JsonPtr& jsonMessagePtr)
+inline json_int_t ExtractSession(const JsonPtr& jsonMessagePtr)
 {
-    return ExtractString(jsonMessagePtr.get(), "transaction");
+    return ExtractInt(jsonMessagePtr.get(), "session_id");
 }
 
 inline std::string ExtractJanus(const JsonPtr& jsonMessagePtr)
