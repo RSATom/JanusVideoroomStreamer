@@ -297,6 +297,8 @@ void WsClient::Private::connect()
         return;
     }
 
+    GCharPtr pathPtr(g_strconcat("/", path, nullptr));
+
     if(0 == strcmp(prot, "ws"))
         useSecureConnection = false;
     else if(0 == strcmp(prot, "wss"))
@@ -320,7 +322,7 @@ void WsClient::Private::connect()
     connectInfo.address = ads;
     connectInfo.host = ads;
     connectInfo.port = port;
-    connectInfo.path = path;
+    connectInfo.path = pathPtr.get();
 
     if(useSecureConnection)
         connectInfo.ssl_connection = LCCSCF_USE_SSL;
