@@ -39,17 +39,47 @@ parts:
       - libssl-dev
     stage-packages:
       - libssl1.1
-  nice:
+
+  gstreamer:
     plugin: meson
     source-type: git
-    source: https://github.com/libnice/libnice.git
-    source-branch: latest-release
+    source: https://github.com/GStreamer/gst-build.git
+    source-tag: 1.18.3
     meson-parameters:
-      - --prefix=/opt/${SNAPCRAFT_PROJECT_NAME}
+      - --prefix=/usr
+      - -Dbase=enabled
+      - -Dgood=enabled
+      - -Dbad=enabled
+      - -Dugly=enabled
+      - -Ddevtools=disabled
+      - -Ddoc=disabled
+      - -Dexamples=disabled
+      - -Dges=disabled
+      - -Dgst-examples=disabled
+      - -Dgtk_doc=disabled
+      - -Dlibav=enabled
+      - -Dlibnice=enabled
+      - -Dnls=disabled
+      - -Domx=disabled
+      - -Dpython=disabled
+      - -Dqt5=disabled
+      - -Drs=disabled
+      - -Drtsp_server=disabled
+      - -Dsharp=disabled
+      - -Dtests=disabled
+      - -Dtls=enabled
+      - -Dvaapi=disabled
     build-packages:
-      - pkg-config
-      - libglib2.0-dev
-      - gtk-doc-tools
+      - flex
+      - bison
+      - nasm
+      - libvpx-dev
+      - libsrtp2-dev
+      - libmount-dev
+    stage-packages:
+      - libvpx6
+      - libsrtp2-1
+
   streamer:
     plugin: cmake
     source-type: git
@@ -61,15 +91,12 @@ parts:
         snapcraftctl set-version "$(git describe --always)"
     after:
       - lws
-      - nice
+      - gstreamer
     build-packages:
       - g++
       - make
       - libspdlog-dev
       - libconfig-dev
-      - libgstreamer1.0-dev
-      - libgstreamer-plugins-bad1.0-dev
-      - libjansson-dev
     stage-packages:
       - libconfig9
       - libjansson4
@@ -77,10 +104,6 @@ parts:
       - libgpm2
       - libpulse0
       - libx264-155
-      - gstreamer1.0-plugins-good
-      - gstreamer1.0-plugins-bad
-      - gstreamer1.0-plugins-ugly
-      - gstreamer1.0-nice
 
 apps:
   JanusVideoroomStreamer:
