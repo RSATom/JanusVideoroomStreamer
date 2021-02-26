@@ -99,6 +99,7 @@ parts:
       - make
       - libspdlog-dev
       - libconfig-dev
+      - libjansson-dev
     stage-packages:
       - libconfig9
       - libjansson4
