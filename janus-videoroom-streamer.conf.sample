@@ -1,7 +1,7 @@
 janus: {
 #  url: "wss://janus.conf.meetecho.com/ws"
 #  room: 1234
-  display: "Videorom Client"
+  display: "janus-videoroom-streamer"
 }
 
 streamer: {
