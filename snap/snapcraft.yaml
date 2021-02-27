@@ -19,7 +19,8 @@ environment:
   GST_PLUGIN_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gstreamer-1.0
   GST_PLUGIN_SYSTEM_PATH: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gstreamer-1.0
   GST_PLUGIN_SCANNER: $SNAP/usr/libexec/$SNAPCRAFT_ARCH_TRIPLET/gstreamer-1.0/gst-plugin-scanner
-  LD_LIBRARY_PATH: $SNAP/opt/${SNAP_NAME}/lib
+  LD_LIBRARY_PATH: $SNAP/usr/local/lib/$SNAPCRAFT_ARCH_TRIPLET:$SNAP/opt/${SNAP_NAME}/lib
+  GST_PLUGIN_SYSTEM_PATH: $SNAP/usr/local/lib/$SNAPCRAFT_ARCH_TRIPLET/gstreamer-1.0
 
 layout:
   /opt/janus-videoroom-streamer/lib:
@@ -47,7 +48,6 @@ parts:
     source: https://github.com/GStreamer/gst-build.git
     source-tag: 1.18.3
     meson-parameters:
-      - --prefix=/usr
       - -Dbase=enabled
       - -Dgood=enabled
       - -Dbad=enabled
@@ -80,6 +80,9 @@ parts:
     stage-packages:
       - libvpx6
       - libsrtp2-1
+    override-stage: |
+      snapcraftctl stage
+      chmod u-s $SNAPCRAFT_STAGE/usr/local/libexec/gstreamer-1.0/gst-ptp-helper
 
   streamer:
     plugin: cmake
@@ -87,7 +90,7 @@ parts:
     source: https://github.com/WebRTSP/JanusVideoroomStreamer.git
     build-environment:
       - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/opt/${SNAPCRAFT_PROJECT_NAME}/lib/pkgconfig:$PKG_CONFIG_PATH
-      - LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET
+      - LD_LIBRARY_PATH: $LD_LIBRARY_PATH:$SNAPCRAFT_STAGE/usr/local/lib/$SNAPCRAFT_ARCH_TRIPLET
     override-pull: |
         snapcraftctl pull
         snapcraftctl set-version "$(git describe --always)"
