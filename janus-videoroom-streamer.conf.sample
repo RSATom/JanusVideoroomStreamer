@@ -5,9 +5,8 @@ janus: {
 }
 
 streamer: {
-  type: "test"
-  videocodec: "vp8"
-  uri: "bars"
+  type: "restreamer"
+  url: "rtsp://ipcam.stream:8554/bars-vp8"
 }
 
 debug: {
