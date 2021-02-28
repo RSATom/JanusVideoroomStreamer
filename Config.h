@@ -35,6 +35,7 @@ struct Config
     int room;
 
     unsigned reconnectTimeout;
+    bool trackParticipants = false;
 
     StreamerConfig streamer;
 };
