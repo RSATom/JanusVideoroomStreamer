@@ -154,6 +154,8 @@ bool Session::handleMessage(const JsonPtr& jsonMessagePtr) noexcept
                 case MessageType::Trickle:
                     // any other reply is not expected for such message types
                     _sentMessages.erase(it);
+                default:
+                    break;
                 }
 
                 return true;
@@ -176,6 +178,8 @@ bool Session::handleMessage(const JsonPtr& jsonMessagePtr) noexcept
                 return handleTrickleReply(jsonMessagePtr);
             case MessageType::ListParticipants:
                 return handleListParticipantsReply(jsonMessagePtr);
+            default:
+                break;
             }
         }
 
