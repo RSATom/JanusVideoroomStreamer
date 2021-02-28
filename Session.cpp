@@ -61,7 +61,7 @@ Session::Session(
             return TRUE;
         };
 
-   _keepaliveTimeout =
+    _keepaliveTimeout =
         g_timeout_add_seconds(
             TIMEOUT_CHECK_INTERVAL,
             timeoutCallback, this);
