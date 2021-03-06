@@ -36,7 +36,7 @@ struct SessionData
     bool terminateSession = false;
     MessageBuffer incomingMessage;
     std::deque<MessageBuffer> sendMessages;
-    std::unique_ptr<Session > session;
+    std::unique_ptr<Session> session;
 };
 
 // Should contain only POD types,
