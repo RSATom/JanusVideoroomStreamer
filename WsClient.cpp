@@ -241,7 +241,8 @@ bool WsClient::Private::init()
     wsInfo.uid = -1;
     wsInfo.port = CONTEXT_PORT_NO_LISTEN;
     wsInfo.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT;
-    wsInfo.ssl_cipher_list = "DEFAULT@SECLEVEL=1";
+    if(!config.cipherList.empty())
+        wsInfo.ssl_cipher_list = config.cipherList.c_str();
 #if defined(LWS_WITH_GLIB)
     wsInfo.options |= LWS_SERVER_OPTION_GLIB;
     wsInfo.foreign_loops = reinterpret_cast<void**>(&loop);

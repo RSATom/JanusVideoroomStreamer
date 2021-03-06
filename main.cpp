@@ -66,6 +66,11 @@ static bool LoadConfig(Config* config)
             if(CONFIG_TRUE == config_setting_lookup_string(targetConfig, "url", &url)) {
                 loadedConfig.janusUrl = url;
             }
+            const char* cipherList = nullptr;
+            if(CONFIG_TRUE == config_setting_lookup_string(targetConfig, "cipher-list", &cipherList))
+            {
+                loadedConfig.cipherList = cipherList;
+            }
             int timeout = 0;
             if(CONFIG_TRUE == config_setting_lookup_int(targetConfig, "reconnect-timeout", &timeout)) {
                 loadedConfig.reconnectTimeout = static_cast<unsigned>(timeout);

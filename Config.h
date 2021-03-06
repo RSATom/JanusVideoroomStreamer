@@ -31,6 +31,7 @@ struct Config
     std::deque<std::string> iceServers;
 
     std::string janusUrl;
+    std::string cipherList;
     std::string display;
     int room;
 
