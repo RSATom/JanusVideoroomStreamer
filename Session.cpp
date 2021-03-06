@@ -640,6 +640,7 @@ void Session::iceCandidate(unsigned mlineIndex, const std::string& candidate)
 
 void Session::eos()
 {
+    disconnect();
 }
 
 

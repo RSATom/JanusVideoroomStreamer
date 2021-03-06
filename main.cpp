@@ -23,8 +23,11 @@
 #include "WsClient.h"
 
 
-static const auto Log = ClientLog;
+enum {
+    DEFAULT_RECONNECT_TIMEOUT = 5,
+};
 
+static const auto Log = ClientLog;
 
 static bool LoadConfig(Config* config)
 {
@@ -162,8 +165,25 @@ static std::unique_ptr<Session> CreateSession(
             sendMessage);
 }
 
-static void ClientDisconnected() noexcept
+static void ClientDisconnected(
+    const Config* config,
+    WsClient* client) noexcept
 {
+    const unsigned reconnectTimeout =
+        config->reconnectTimeout > 0 ?
+            config->reconnectTimeout :
+            DEFAULT_RECONNECT_TIMEOUT;
+
+    Log()->info("Scheduling reconnect in {} seconds...", reconnectTimeout);
+
+    GSourcePtr timeoutSourcePtr(g_timeout_source_new_seconds(reconnectTimeout));
+    GSource* timeoutSource = timeoutSourcePtr.get();
+    g_source_set_callback(timeoutSource,
+        [] (gpointer userData) -> gboolean {
+            static_cast<WsClient*>(userData)->connect();
+            return false;
+        }, client, nullptr);
+    g_source_attach(timeoutSource, g_main_context_get_thread_default());
 }
 
 int main(int argc, char *argv[])
@@ -188,7 +208,7 @@ int main(int argc, char *argv[])
             CreateSession,
             &config,
             std::placeholders::_1),
-        ClientDisconnected);
+        std::bind(ClientDisconnected, &config, &client));
 
     if(client.init()) {
         client.connect();
