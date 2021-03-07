@@ -16,6 +16,7 @@
 #include "GstStreaming/LibGst.h"
 
 #include "GstStreaming/GstTestStreamer.h"
+#include "GstStreaming/GstPipelineStreamer.h"
 #include "GstStreaming/GstReStreamer.h"
 
 #include "Log.h"
@@ -86,19 +87,10 @@ static bool LoadConfig(Config* config)
         }
         config_setting_t* streamerConfig = config_lookup(&config, "streamer");
         if(streamerConfig && CONFIG_TRUE == config_setting_is_group(streamerConfig)) {
-            const char* type = nullptr;
-            config_setting_lookup_string(streamerConfig, "type", &type);
-
-            if(nullptr == type || 0 == strcmp(type, "restreamer"))
-                loadedConfig.streamer.type = StreamerConfig::Type::ReStreamer;
-            else if(0 == strcmp(type, "test"))
+            const char* test = nullptr;
+            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "test", &test)) {
                 loadedConfig.streamer.type = StreamerConfig::Type::Test;
-
-            const char* uri = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "url", &uri) ||
-               CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "uri", &uri))
-            {
-                loadedConfig.streamer.uri = uri;
+                loadedConfig.streamer.source = test;
             }
 
             const char* videocodec = nullptr;
@@ -107,6 +99,18 @@ static bool LoadConfig(Config* config)
                     loadedConfig.streamer.videocodec = GstStreaming::Videocodec::h264;
                 else if(0 == strcmp(videocodec, "vp8"))
                     loadedConfig.streamer.videocodec = GstStreaming::Videocodec::vp8;
+            }
+
+            const char* pipeline = nullptr;
+            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "pipeline", &pipeline)) {
+                loadedConfig.streamer.type = StreamerConfig::Type::Pipeline;
+                loadedConfig.streamer.source = pipeline;
+            }
+
+            const char* url = nullptr;
+            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "restream", &url)) {
+                loadedConfig.streamer.type = StreamerConfig::Type::ReStreamer;
+                loadedConfig.streamer.source = url;
             }
         }
         config_setting_t* debugConfig = config_lookup(&config, "debug");
@@ -151,11 +155,19 @@ CreatePeer(const Config* config)
 {
     switch(config->streamer.type) {
     case StreamerConfig::Type::Test:
-        return std::make_unique<GstTestStreamer>(config->streamer.uri, config->streamer.videocodec);
+        return
+            std::make_unique<GstTestStreamer>(
+                config->streamer.source,
+                config->streamer.videocodec);
+    case StreamerConfig::Type::Pipeline:
+        return
+            std::make_unique<GstPipelineStreamer>(config->streamer.source);
     case StreamerConfig::Type::ReStreamer:
-        return std::make_unique<GstReStreamer>(config->streamer.uri);
+        return
+            std::make_unique<GstReStreamer>(config->streamer.source);
     default:
-        return std::make_unique<GstTestStreamer>();
+        return
+            std::make_unique<GstTestStreamer>();
     }
 }
 

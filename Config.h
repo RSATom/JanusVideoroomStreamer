@@ -15,12 +15,13 @@ struct StreamerConfig
 {
     enum class Type {
         Test,
+        Pipeline,
         ReStreamer,
     };
 
-    Type type;
-    std::string uri;
-    GstStreaming::Videocodec videocodec = GstStreaming::Videocodec::h264;
+    Type type = Type::Test;
+    std::string source;
+    GstStreaming::Videocodec videocodec = GstStreaming::Videocodec::vp8;
 };
 
 struct Config

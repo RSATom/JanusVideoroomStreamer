@@ -4,9 +4,21 @@ janus: {
   display: "janus-videoroom-streamer"
 }
 
+#streamer: {
+#  test: "snow"
+#  #videocodec: "vp8" // "vp8" or "h264"
+#}
+
+#streamer: {
+#  pipeline:
+#    "videotestsrc pattern=blue ! "
+#    "clockoverlay halignment=center valignment=center shaded-background=true font-desc=\"Sans, 36\" ! "
+#    "vp8enc ! rtpvp8pay ! "
+#    "webrtcbin"
+#}
+
 streamer: {
-  type: "restreamer"
-  url: "rtsp://ipcam.stream:8554/bars-vp8"
+  restream: "rtsp://ipcam.stream:8554/bars-vp8"
 }
 
 debug: {
