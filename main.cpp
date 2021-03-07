@@ -191,7 +191,7 @@ static void ClientDisconnected(
     g_source_attach(timeoutSource, g_main_context_get_thread_default());
 }
 
-int main(int argc, char *argv[])
+int main(int /*argc*/, char** /*argv*/)
 {
     LibGst libGst;
 
