@@ -40,9 +40,6 @@ target_link_libraries(${PROJECT_NAME}
     ${LIBCONFIG_LIBRARIES}
     ${SPDLOG_LDFLAGS}
     ${JANSSON_LDFLAGS}
-    RtspParser
-    Client
-    Signalling
     GstStreaming)
 
 if(SNAPCRAFT_BUILD)

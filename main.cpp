@@ -212,7 +212,6 @@ int main(int /*argc*/, char** /*argv*/)
         return -1;
 
     InitLwsLogger(config.lwsLogLevel);
-    InitWsClientLogger(config.logLevel);
     InitJanusClientLogger(config.logLevel);
 
     GMainLoopPtr loopPtr(g_main_loop_new(nullptr, FALSE));
