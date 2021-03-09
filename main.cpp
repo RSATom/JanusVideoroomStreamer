@@ -1,17 +1,11 @@
 #include <deque>
 
-#include <glib.h>
-
-#include <libwebsockets.h>
-
 #include <CxxPtr/CPtr.h>
 #include <CxxPtr/GlibPtr.h>
 #include "CxxPtr/libconfigDestroy.h"
 
 #include "Common/ConfigHelpers.h"
 #include "Common/LwsLog.h"
-
-#include "Client/Log.h"
 
 #include "GstStreaming/LibGst.h"
 
