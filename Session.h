@@ -4,7 +4,7 @@
 #include "CxxPtr/JanssonPtr.h"
 
 #include "Config.h"
-#include "RtspSession/WebRTCPeer.h"
+#include "RtcStreaming/WebRTCPeer.h"
 
 #include "MessageType.h"
 

@@ -7,11 +7,11 @@
 #include "Common/ConfigHelpers.h"
 #include "Common/LwsLog.h"
 
-#include "GstStreaming/LibGst.h"
+#include "RtcStreaming/GstRtcStreaming/LibGst.h"
 
-#include "GstStreaming/GstTestStreamer.h"
-#include "GstStreaming/GstPipelineStreamer.h"
-#include "GstStreaming/GstReStreamer.h"
+#include "RtcStreaming/GstRtcStreaming/GstTestStreamer.h"
+#include "RtcStreaming/GstRtcStreaming/GstPipelineStreamer.h"
+#include "RtcStreaming/GstRtcStreaming/GstReStreamer.h"
 
 #include "Log.h"
 #include "Config.h"
@@ -90,9 +90,9 @@ static bool LoadConfig(Config* config)
             const char* videocodec = nullptr;
             if(config_setting_lookup_string(streamerConfig, "videocodec", &videocodec)) {
                 if(0 == strcmp(videocodec, "h264"))
-                    loadedConfig.streamer.videocodec = GstStreaming::Videocodec::h264;
+                    loadedConfig.streamer.videocodec = GstRtcStreaming::Videocodec::h264;
                 else if(0 == strcmp(videocodec, "vp8"))
-                    loadedConfig.streamer.videocodec = GstStreaming::Videocodec::vp8;
+                    loadedConfig.streamer.videocodec = GstRtcStreaming::Videocodec::vp8;
             }
 
             const char* pipeline = nullptr;

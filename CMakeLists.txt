@@ -10,7 +10,7 @@ endif()
 add_subdirectory(WebRTSP)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/WebRTSP
-    ${CMAKE_CURRENT_SOURCE_DIR}/WebRTSP/deps)
+    ${CMAKE_CURRENT_SOURCE_DIR}/WebRTSP/RtcStreaming/deps)
 
 find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
@@ -40,7 +40,8 @@ target_link_libraries(${PROJECT_NAME}
     ${LIBCONFIG_LIBRARIES}
     ${SPDLOG_LDFLAGS}
     ${JANSSON_LDFLAGS}
-    GstStreaming)
+    Common
+    RtcStreaming)
 
 if(SNAPCRAFT_BUILD)
     install(TARGETS ${PROJECT_NAME} DESTINATION bin)

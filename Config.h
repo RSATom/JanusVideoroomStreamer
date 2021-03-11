@@ -8,7 +8,7 @@
 
 #include <spdlog/common.h>
 
-#include "GstStreaming/Types.h"
+#include "RtcStreaming/GstRtcStreaming/Types.h"
 
 
 struct StreamerConfig
@@ -21,7 +21,7 @@ struct StreamerConfig
 
     Type type = Type::Test;
     std::string source;
-    GstStreaming::Videocodec videocodec = GstStreaming::Videocodec::vp8;
+    GstRtcStreaming::Videocodec videocodec = GstRtcStreaming::Videocodec::vp8;
 };
 
 struct Config
