@@ -18,7 +18,7 @@ janus: {
 #}
 
 streamer: {
-  restream: "rtsp://ipcam.stream:8554/bars-vp8"
+  url: "rtsp://ipcam.stream:8554/bars-vp8"
 }
 
 debug: {

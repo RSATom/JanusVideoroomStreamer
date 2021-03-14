@@ -102,7 +102,7 @@ static bool LoadConfig(Config* config)
             }
 
             const char* url = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "restream", &url)) {
+            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "url", &url)) {
                 loadedConfig.streamer.type = StreamerConfig::Type::ReStreamer;
                 loadedConfig.streamer.source = url;
             }
