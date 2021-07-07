@@ -626,8 +626,8 @@ bool Session::handleEvent(const JsonPtr& jsonMessagePtr)
 
 void Session::streamerPrepared()
 {
-    std::string sdp;
-    if(_streamerPtr->sdp(&sdp))
+    const std::string sdp = _streamerPtr->sdp();
+    if(!sdp.empty())
         sendPublish(sdp);
     else
         disconnect();

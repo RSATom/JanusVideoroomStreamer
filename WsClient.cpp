@@ -8,8 +8,7 @@
 #include "CxxPtr/JanssonPtr.h"
 #include "CxxPtr/GlibPtr.h"
 
-#include "Common/MessageBuffer.h"
-#include "Common/LwsSource.h"
+#include "Helpers/MessageBuffer.h"
 
 #include "Log.h"
 

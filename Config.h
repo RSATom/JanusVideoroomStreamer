@@ -1,14 +1,12 @@
 #pragma once
 
-#include "Client/Config.h"
-
 #include <string>
 #include <deque>
 #include <map>
 
 #include <spdlog/common.h>
 
-#include "RtcStreaming/GstRtcStreaming/Types.h"
+#include "RtStreaming/GstRtStreaming/Types.h"
 
 
 struct StreamerConfig
@@ -21,7 +19,7 @@ struct StreamerConfig
 
     Type type = Type::Test;
     std::string source;
-    GstRtcStreaming::Videocodec videocodec = GstRtcStreaming::Videocodec::vp8;
+    GstRtStreaming::Videocodec videocodec = GstRtStreaming::Videocodec::vp8;
 };
 
 struct Config

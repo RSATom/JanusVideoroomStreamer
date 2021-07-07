@@ -4,14 +4,13 @@
 #include <CxxPtr/GlibPtr.h>
 #include "CxxPtr/libconfigDestroy.h"
 
-#include "Common/ConfigHelpers.h"
-#include "Common/LwsLog.h"
+#include "Helpers/ConfigHelpers.h"
+#include "Helpers/LwsLog.h"
 
-#include "RtcStreaming/GstRtcStreaming/LibGst.h"
-
-#include "RtcStreaming/GstRtcStreaming/GstTestStreamer.h"
-#include "RtcStreaming/GstRtcStreaming/GstPipelineStreamer.h"
-#include "RtcStreaming/GstRtcStreaming/GstReStreamer.h"
+#include "RtStreaming/GstRtStreaming/LibGst.h"
+#include "RtStreaming/GstRtStreaming/GstTestStreamer.h"
+#include "RtStreaming/GstRtStreaming/GstPipelineStreamer.h"
+#include "RtStreaming/GstRtStreaming/GstReStreamer.h"
 
 #include "Log.h"
 #include "Config.h"
@@ -90,9 +89,9 @@ static bool LoadConfig(Config* config)
             const char* videocodec = nullptr;
             if(config_setting_lookup_string(streamerConfig, "videocodec", &videocodec)) {
                 if(0 == strcmp(videocodec, "h264"))
-                    loadedConfig.streamer.videocodec = GstRtcStreaming::Videocodec::h264;
+                    loadedConfig.streamer.videocodec = GstRtStreaming::Videocodec::h264;
                 else if(0 == strcmp(videocodec, "vp8"))
-                    loadedConfig.streamer.videocodec = GstRtcStreaming::Videocodec::vp8;
+                    loadedConfig.streamer.videocodec = GstRtStreaming::Videocodec::vp8;
             }
 
             const char* pipeline = nullptr;

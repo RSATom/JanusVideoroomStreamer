@@ -6,8 +6,6 @@
 
 #include <glib.h>
 
-#include "RtspSession/ClientSession.h"
-
 #include "Config.h"
 #include "Session.h"
 
