@@ -152,7 +152,7 @@ int WsClient::Private::wsCallback(
                         scd->data->incomingMessage.data() + scd->data->incomingMessage.size(),
                         std::back_inserter(logMessage), '\r');
 
-                    Log()->trace("-> WsClient: {}", logMessage);
+                    Log()->trace("WsClient <- {}", logMessage);
                 }
 
                 if(!onMessage(scd, scd->data->incomingMessage))
@@ -190,7 +190,7 @@ int WsClient::Private::wsCallback(
             connected = false;
 
             if(disconnected)
-                disconnected();
+                disconnected(owner);
 
             break;
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -203,7 +203,7 @@ int WsClient::Private::wsCallback(
             connected = false;
 
             if(disconnected)
-                disconnected();
+                disconnected(owner);
 
             break;
         default:
@@ -324,8 +324,9 @@ void WsClient::Private::connect()
     connectInfo.port = port;
     connectInfo.path = pathPtr.get();
 
-    if(useSecureConnection)
-        connectInfo.ssl_connection = LCCSCF_USE_SSL;
+    if(useSecureConnection) {
+        connectInfo.ssl_connection = LCCSCF_USE_SSL | LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
+    }
     connectInfo.protocol = "janus-protocol";
 
     connection = lws_client_connect_via_info(&connectInfo);
@@ -380,7 +381,7 @@ void WsClient::Private::sendMessage(
                 logMessage.push_back(*c);
         }
 
-        Log()->trace("WsClient -> : {}", logMessage);
+        Log()->trace("WsClient -> {}", logMessage);
     }
 
     MessageBuffer requestMessage;

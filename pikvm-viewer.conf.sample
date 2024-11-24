@@ -1,0 +1,9 @@
+janus: {
+  url: "wss://pi.kvm.ip.address/janus/ws"
+}
+
+debug: {
+  log-level: 5
+#  log-level: 3
+#  lws-log-level: 2
+}

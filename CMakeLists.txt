@@ -1,11 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(JanusVideoroomStreamer)
+project(PiKVM-Viewer)
 
-if(DEFINED ENV{SNAPCRAFT_BUILD_ENVIRONMENT})
-    add_definitions(-DSNAPCRAFT_BUILD=1)
-    set(SNAPCRAFT_BUILD YES)
-endif()
+set(ONVIF_SUPPORT NO)
 
 add_subdirectory(Helpers)
 add_subdirectory(RtStreaming)
@@ -42,8 +39,3 @@ target_link_libraries(${PROJECT_NAME}
     ${JANSSON_LDFLAGS}
     Helpers
     RtStreaming)
-
-if(SNAPCRAFT_BUILD)
-    install(TARGETS ${PROJECT_NAME} DESTINATION bin)
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/janus-videoroom-streamer.conf.sample DESTINATION etc)
-endif()

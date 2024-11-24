@@ -1,7 +1,11 @@
 #include "Session.h"
 
+#include <cassert>
+
 #include "CxxPtr/CPtr.h"
 #include "CxxPtr/JanssonPtr.h"
+
+#include "RtStreaming/GstRtStreaming/GstClient.h"
 
 
 namespace {
@@ -9,10 +13,9 @@ namespace {
 enum {
     KEEPALIVE_TIMEOUT = 30,
     TIMEOUT_CHECK_INTERVAL = 15,
-    UPDATE_PARTICIPANTS_INTERVAL = 60,
 };
 
-char const * const Plugin = "janus.plugin.videoroom";
+char const * const Plugin = "janus.plugin.ustreamer";
 
 std::string ExtractString(json_t* json, const char* name)
 {
@@ -51,10 +54,10 @@ inline std::string ExtractJanus(const JsonPtr& jsonMessagePtr)
 
 Session::Session(
     const Config* config,
-    const std::function<std::unique_ptr<WebRTCPeer> ()>& createPeer,
     const std::function<void (const char*)>& sendMessage) noexcept:
-    _config(config), _createPeer(createPeer), _sendMessage(sendMessage),
-    _lastMessageTimer(g_timer_new())
+    _config(config), _sendMessage(sendMessage),
+    _lastMessageTimer(g_timer_new()),
+    _viewPeerPtr(std::make_unique<GstClient>())
 {
     const GSourceFunc timeoutCallback =
         [] (gpointer userData) -> gboolean {
@@ -66,19 +69,6 @@ Session::Session(
         g_timeout_add_seconds(
             TIMEOUT_CHECK_INTERVAL,
             timeoutCallback, this);
-
-    if(_config->trackParticipants) {
-        const GSourceFunc updateParticipantsTimeoutCallback =
-            [] (gpointer userData) -> gboolean {
-                static_cast<Session*>(userData)->updateParticipants();
-                return TRUE;
-            };
-
-        _updateParticipantsTimeout =
-            g_timeout_add_seconds(
-                UPDATE_PARTICIPANTS_INTERVAL,
-                updateParticipantsTimeoutCallback, this);
-    }
 }
 
 Session::~Session()
@@ -168,16 +158,14 @@ bool Session::handleMessage(const JsonPtr& jsonMessagePtr) noexcept
                 return handleCreateSessionReply(jsonMessagePtr);
             case MessageType::AttachPlugin:
                 return handleAttachPluginReply(jsonMessagePtr);
-            case MessageType::Join:
-                return handleJoinReply(jsonMessagePtr);
-            case MessageType::Publish:
-                return handlePublishReply(jsonMessagePtr);
-            case MessageType::UnPublish:
-                return handleUnPublishReply(jsonMessagePtr);
+            case MessageType::Features:
+                return handleFeaturesReply(jsonMessagePtr);
+            case MessageType::Watch:
+                return handleWatchReply(jsonMessagePtr);
+            case MessageType::Start:
+                return handleStartReply(jsonMessagePtr);
             case MessageType::Trickle:
                 return handleTrickleReply(jsonMessagePtr);
-            case MessageType::ListParticipants:
-                return handleListParticipantsReply(jsonMessagePtr);
             default:
                 break;
             }
@@ -257,12 +245,13 @@ bool Session::handleAttachPluginReply(const JsonPtr& jsonMessagePtr)
     if(!_handleId)
         return false;
 
-    sendJoin();
+    sendFeatures();
+    sendWatch();
 
     return true;
 }
 
-void Session::sendJoin()
+void Session::sendFeatures()
 {
     JsonPtr jsonMessagePtr(json_object());
     json_t* jsonMessage = jsonMessagePtr.get();
@@ -273,49 +262,21 @@ void Session::sendJoin()
     json_object_set_new(jsonMessage, "session_id", json_integer(_session));
     json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
     json_object_set_new(jsonMessage, "janus", json_string("message"));
-    json_object_set_new(jsonMessage, "plugin", json_string(Plugin));
 
     json_t* jsonBody = json_object();
     json_object_set_new(jsonMessage, "body", jsonBody);
 
-    json_object_set_new(jsonBody, "request", json_string("join"));
-    json_object_set_new(jsonBody, "ptype", json_string("publisher"));
-    json_object_set_new(jsonBody, "room", json_integer(_config->room));
-    json_object_set_new(jsonBody, "display", json_string(_config->display.c_str()));
+    json_object_set_new(jsonBody, "request", json_string("features"));
 
-    sendMessage(MessageType::Join, jsonMessagePtr);
+   sendMessage(MessageType::Features, jsonMessagePtr);
 }
 
-bool Session::handleJoinReply(const JsonPtr& jsonMessagePtr)
+bool Session::handleFeaturesReply(const JsonPtr& jsonMessagePtr)
 {
-    if(_session == 0 || _handleId == 0)
-        return false;
-
-    if(ExtractJanus(jsonMessagePtr) != "event")
-        return false;
-
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_t* plugindataJson = json_object_get(jsonMessage, "plugindata");
-    if(!plugindataJson)
-        return false;
-
-    json_t* dataJson = json_object_get(plugindataJson, "data");
-    if(!dataJson)
-        return false;
-
-    if(ExtractString(dataJson, "videoroom") != "joined")
-        return false;
-
-    if(_config->trackParticipants)
-        updateParticipants();
-    else
-        startStream();
-
     return true;
 }
 
-void Session::sendPublish(const std::string& sdp)
+void Session::sendWatch()
 {
     JsonPtr jsonMessagePtr(json_object());
     json_t* jsonMessage = jsonMessagePtr.get();
@@ -326,191 +287,54 @@ void Session::sendPublish(const std::string& sdp)
     json_object_set_new(jsonMessage, "session_id", json_integer(_session));
     json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
     json_object_set_new(jsonMessage, "janus", json_string("message"));
-    json_object_set_new(jsonMessage, "plugin", json_string(Plugin));
 
     json_t* jsonBody = json_object();
     json_object_set_new(jsonMessage, "body", jsonBody);
 
-    json_object_set_new(jsonBody, "request", json_string("configure"));
+    json_object_set_new(jsonBody, "request", json_string("watch"));
 
-    json_object_set_new(jsonBody, "audio", json_boolean(false));
-    json_object_set_new(jsonBody, "video", json_boolean(true));
-    json_object_set_new(jsonBody, "data", json_boolean(false));
+    json_t* jsonParams = json_object();
+    json_object_set_new(jsonBody, "params", jsonParams);
+
+    json_object_set_new(jsonParams, "audio", json_boolean(true));
+    //json_object_set_new(jsonParams, "audio", json_boolean(false));
+
+    sendMessage(MessageType::Watch, jsonMessagePtr);
+}
+
+bool Session::handleWatchReply(const JsonPtr& jsonMessagePtr)
+{
+    return true;
+}
+
+void Session::sendStart(const std::string& sdp)
+{
+    JsonPtr jsonMessagePtr(json_object());
+    json_t* jsonMessage = jsonMessagePtr.get();
+
+    json_object_set_new(
+        jsonMessage,
+        "transaction", json_string(std::to_string(_nextTransaction++).c_str()));
+    json_object_set_new(jsonMessage, "session_id", json_integer(_session));
+    json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
+    json_object_set_new(jsonMessage, "janus", json_string("message"));
+
+    json_t* jsonBody = json_object();
+    json_object_set_new(jsonMessage, "body", jsonBody);
+
+    json_object_set_new(jsonBody, "request", json_string("start"));
 
     json_t* jsep = json_object();
     json_object_set_new(jsonMessage, "jsep", jsep);
 
-    json_object_set_new(jsep, "type", json_string("offer"));
+    json_object_set_new(jsep, "type", json_string("answer"));
     json_object_set_new(jsep, "sdp", json_string(sdp.c_str()));
 
-    sendMessage(MessageType::Publish, jsonMessagePtr);
+    sendMessage(MessageType::Start, jsonMessagePtr);
 }
 
-bool Session::handlePublishReply(const JsonPtr& jsonMessagePtr)
+bool Session::handleStartReply(const JsonPtr& jsonMessagePtr)
 {
-    if(_session == 0 || _handleId == 0)
-        return false;
-
-    if(ExtractJanus(jsonMessagePtr) != "event")
-        return false;
-
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_t* plugindataJson = json_object_get(jsonMessage, "plugindata");
-    if(!plugindataJson)
-        return false;
-
-    json_t* dataJson = json_object_get(plugindataJson, "data");
-    if(!dataJson)
-        return false;
-
-    if(ExtractString(dataJson, "videoroom") != "event")
-        return false;
-
-    if(ExtractString(dataJson, "configured") != "ok")
-        return false;
-
-    json_t* jsepJson = json_object_get(jsonMessage, "jsep");
-    if(!jsepJson)
-        return false;
-
-    const std::string type = ExtractString(jsepJson, "type");
-    if(type != "answer")
-        return false;
-
-    const std::string sdp = ExtractString(jsepJson, "sdp");
-
-    if(!_streamerPtr)
-        return false;
-
-    _streamerPtr->setRemoteSdp(sdp);
-
-    _streamerPtr->play();
-
-    return true;
-}
-
-/*
-void Session::sendJoinAndConfigure(const std::string& sdp)
-{
-    JsonPtr jsonMessagePtr(json_object());
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_object_set_new(
-        jsonMessage,
-        "transaction", json_string(std::to_string(_nextTransaction++).c_str()));
-    json_object_set_new(jsonMessage, "session_id", json_integer(_session));
-    json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
-    json_object_set_new(jsonMessage, "janus", json_string("message"));
-    json_object_set_new(jsonMessage, "plugin", json_string(Plugin));
-
-    json_t* jsonBody = json_object();
-    json_object_set_new(jsonMessage, "body", jsonBody);
-
-    json_object_set_new(jsonBody, "request", json_string("joinandconfigure"));
-    json_object_set_new(jsonBody, "ptype", json_string("publisher"));
-    json_object_set_new(jsonBody, "room", json_integer(_config->room));
-    json_object_set_new(jsonBody, "display", json_string(_config->display.c_str()));
-
-    json_object_set_new(jsonBody, "audio", json_boolean(false));
-    json_object_set_new(jsonBody, "video", json_boolean(true));
-    json_object_set_new(jsonBody, "data", json_boolean(false));
-
-    json_t* jsep = json_object();
-    json_object_set_new(jsonMessage, "jsep", jsep);
-
-    json_object_set_new(jsep, "type", json_string("offer"));
-    json_object_set_new(jsep, "sdp", json_string(sdp.c_str()));
-
-    sendMessage(MessageType::JoinAndConfigure, jsonMessagePtr);
-}
-
-bool Session::handleJoinAndConfigureReply(const JsonPtr& jsonMessagePtr)
-{
-    if(_session == 0 || _handleId == 0)
-        return false;
-
-    if(ExtractJanus(jsonMessagePtr) != "event")
-        return false;
-
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_t* plugindataJson = json_object_get(jsonMessage, "plugindata");
-    if(!plugindataJson)
-        return false;
-
-    json_t* dataJson = json_object_get(plugindataJson, "data");
-    if(!dataJson)
-        return false;
-
-    if(ExtractString(dataJson, "videoroom") != "joined")
-        return false;
-
-    json_t* jsepJson = json_object_get(jsonMessage, "jsep");
-    if(!jsepJson)
-        return false;
-
-    const std::string type = ExtractString(jsepJson, "type");
-    if(type != "answer")
-        return false;
-
-    const std::string sdp = ExtractString(jsepJson, "sdp");
-
-    if(!_streamerPtr)
-        return false;
-
-    _streamerPtr->setRemoteSdp(sdp);
-
-    _streamerPtr->play();
-
-    return true;
-}
-*/
-
-void Session::sendUnPublish()
-{
-    JsonPtr jsonMessagePtr(json_object());
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_object_set_new(
-        jsonMessage,
-        "transaction", json_string(std::to_string(_nextTransaction++).c_str()));
-    json_object_set_new(jsonMessage, "session_id", json_integer(_session));
-    json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
-    json_object_set_new(jsonMessage, "janus", json_string("message"));
-
-    json_t* jsonBody = json_object();
-    json_object_set_new(jsonMessage, "body", jsonBody);
-
-    json_object_set_new(jsonBody, "request", json_string("unpublish"));
-
-    sendMessage(MessageType::UnPublish, jsonMessagePtr);
-}
-
-bool Session::handleUnPublishReply(const JsonPtr& jsonMessagePtr)
-{
-    if(_session == 0 || _handleId == 0)
-        return false;
-
-    if(ExtractJanus(jsonMessagePtr) != "event")
-        return false;
-
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_t* plugindataJson = json_object_get(jsonMessage, "plugindata");
-    if(!plugindataJson)
-        return false;
-
-    json_t* dataJson = json_object_get(plugindataJson, "data");
-    if(!dataJson)
-        return false;
-
-    if(ExtractString(dataJson, "videoroom") != "event")
-        return false;
-
-    if(ExtractString(dataJson, "unpublished") != "ok")
-        return false;
-
     return true;
 }
 
@@ -544,65 +368,6 @@ bool Session::handleTrickleReply(const JsonPtr& /*jsonMessagePtr*/)
     return true;
 }
 
-
-void Session::sendListParticipants()
-{
-    JsonPtr jsonMessagePtr(json_object());
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_object_set_new(
-        jsonMessage,
-        "transaction", json_string(std::to_string(_nextTransaction++).c_str()));
-    json_object_set_new(jsonMessage, "session_id", json_integer(_session));
-    json_object_set_new(jsonMessage, "handle_id", json_integer(_handleId));
-    json_object_set_new(jsonMessage, "janus", json_string("message"));
-    json_object_set_new(jsonMessage, "plugin", json_string(Plugin));
-
-    json_t* jsonBody = json_object();
-    json_object_set_new(jsonMessage, "body", jsonBody);
-
-    json_object_set_new(jsonBody, "request", json_string("listparticipants"));
-    json_object_set_new(jsonBody, "room", json_integer(_config->room));
-
-    sendMessage(MessageType::ListParticipants, jsonMessagePtr);
-}
-
-bool Session::handleListParticipantsReply(const JsonPtr& jsonMessagePtr)
-{
-    if(_session == 0 || _handleId == 0)
-        return false;
-
-    if(ExtractJanus(jsonMessagePtr) != "success")
-        return false;
-
-    json_t* jsonMessage = jsonMessagePtr.get();
-
-    json_t* plugindataJson = json_object_get(jsonMessage, "plugindata");
-    if(!plugindataJson)
-        return false;
-
-    json_t* dataJson = json_object_get(plugindataJson, "data");
-    if(!dataJson)
-        return false;
-
-    if(ExtractString(dataJson, "videoroom") != "participants")
-        return false;
-
-    json_t* participantsJson = json_object_get(dataJson, "participants");
-    if(!participantsJson)
-        return false;
-
-    if(!json_is_array(participantsJson))
-        return false;
-
-    if(json_array_size(participantsJson) > 1)
-        startStream();
-    else
-        stopStream();
-
-    return true;
-}
-
 bool Session::handleEvent(const JsonPtr& jsonMessagePtr)
 {
     json_t* jsonMessage = jsonMessagePtr.get();
@@ -615,22 +380,61 @@ bool Session::handleEvent(const JsonPtr& jsonMessagePtr)
         json_int_t mLineIndex = ExtractInt(candidateJson, "sdpMLineIndex");
         std::string candidate = ExtractString(candidateJson, "candidate");
 
-        if(!_streamerPtr)
+        if(!_viewPeerPtr)
             return false;
 
-        _streamerPtr->addIceCandidate(mLineIndex, candidate);
+        _viewPeerPtr->addIceCandidate(mLineIndex, candidate);
+    } else if(janus == "event") {
+        json_t* pluginDataJson = json_object_get(jsonMessage, "plugindata");
+        if(!pluginDataJson)
+            return false;
+
+        assert(ExtractString(pluginDataJson, "plugin") == "janus.plugin.ustreamer");
+
+        json_t* dataJson = json_object_get(pluginDataJson, "data");
+        if(!dataJson)
+            return false;
+
+        assert(ExtractString(dataJson, "ustreamer") == "event");
+
+        json_t* resultJson = json_object_get(dataJson, "result");
+        if(!resultJson)
+            return false;
+
+        const std::string status = ExtractString(resultJson, "status");
+        if(status == "features") {
+        } else if(status == "started") {
+            json_t* jsepJson = json_object_get(jsonMessage, "jsep");
+            if(jsepJson) {
+                _viewPeerPtr->prepare(
+                    std::make_shared<WebRTCConfig>(),
+                    std::bind(
+                        &Session::receiverPrepared,
+                        this),
+                    std::bind(
+                        &Session::iceCandidate,
+                        this,
+                        std::placeholders::_1,
+                        std::placeholders::_2),
+                    std::bind(
+                        &Session::eos,
+                        this));
+
+                const std::string sdp = ExtractString(jsepJson, "sdp");
+
+                _viewPeerPtr->setRemoteSdp(sdp);
+            } else {
+                _viewPeerPtr->play();
+            }
+        }
     }
 
     return true;
 }
 
-void Session::streamerPrepared()
+void Session::receiverPrepared()
 {
-    const std::string sdp = _streamerPtr->sdp();
-    if(!sdp.empty())
-        sendPublish(sdp);
-    else
-        disconnect();
+    sendStart(_viewPeerPtr->sdp());
 }
 
 void Session::iceCandidate(unsigned mlineIndex, const std::string& candidate)
@@ -641,48 +445,4 @@ void Session::iceCandidate(unsigned mlineIndex, const std::string& candidate)
 void Session::eos()
 {
     disconnect();
-}
-
-
-void Session::updateParticipants()
-{
-    if(_session == 0 || _handleId == 0) {
-        disconnect();
-        return;
-    }
-
-    sendListParticipants();
-}
-
-void Session::startStream()
-{
-    if(_streamerPtr)
-        return;
-
-    _streamerPtr = _createPeer();
-
-    _streamerPtr->prepare(
-        _config->iceServers,
-        std::bind(
-            &Session::streamerPrepared,
-            this),
-        std::bind(
-            &Session::iceCandidate,
-            this,
-            std::placeholders::_1,
-            std::placeholders::_2),
-        std::bind(
-            &Session::eos,
-            this));
-}
-
-void Session::stopStream()
-{
-    if(!_streamerPtr)
-        return;
-
-    _streamerPtr->stop();
-    _streamerPtr.reset();
-
-    sendUnPublish();
 }

@@ -9,19 +9,6 @@
 #include "RtStreaming/GstRtStreaming/Types.h"
 
 
-struct StreamerConfig
-{
-    enum class Type {
-        Test,
-        Pipeline,
-        ReStreamer,
-    };
-
-    Type type = Type::Test;
-    std::string source;
-    GstRtStreaming::Videocodec videocodec = GstRtStreaming::Videocodec::vp8;
-};
-
 struct Config
 {
     spdlog::level::level_enum logLevel = spdlog::level::info;
@@ -31,11 +18,6 @@ struct Config
 
     std::string janusUrl;
     std::string cipherList;
-    std::string display;
-    int room;
 
     unsigned reconnectTimeout;
-    bool trackParticipants = false;
-
-    StreamerConfig streamer;
 };

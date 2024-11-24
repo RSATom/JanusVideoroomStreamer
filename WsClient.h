@@ -13,11 +13,8 @@
 class WsClient
 {
 public:
-    typedef std::function<
-        std::unique_ptr<Session> (
-            const std::function<void (const char*) noexcept>& sendMessage) noexcept> CreateSession;
-
-    typedef std::function<void () noexcept> Disconnected;
+    typedef std::function<std::unique_ptr<Session> (const std::function<void (const char*)>& sendMessage)> CreateSession;
+    typedef std::function<void (WsClient*)> Disconnected;
 
     WsClient(
         const Config&,
