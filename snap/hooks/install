@@ -1,3 +1,0 @@
-#!/bin/sh -e
-
-cp "$SNAP/opt/$SNAP_NAME/etc/janus-videoroom-streamer.conf.sample" "$SNAP_COMMON/janus-videoroom-streamer.conf"

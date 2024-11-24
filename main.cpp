@@ -8,9 +8,6 @@
 #include "Helpers/LwsLog.h"
 
 #include "RtStreaming/GstRtStreaming/LibGst.h"
-#include "RtStreaming/GstRtStreaming/GstTestStreamer.h"
-#include "RtStreaming/GstRtStreaming/GstPipelineStreamer.h"
-#include "RtStreaming/GstRtStreaming/GstReStreamer.h"
 
 #include "Log.h"
 #include "Config.h"
@@ -33,7 +30,7 @@ static bool LoadConfig(Config* config)
 
     bool someConfigFound = false;
     for(const std::string& configDir: configDirs) {
-        const std::string configFile = configDir + "/janus-videoroom-streamer.conf";
+        const std::string configFile = configDir + "/janus-streaming-viewer.conf";
         if(!g_file_test(configFile.c_str(),  G_FILE_TEST_IS_REGULAR)) {
             Log()->info("Config \"{}\" not found", configFile);
             continue;
@@ -69,43 +66,8 @@ static bool LoadConfig(Config* config)
             if(CONFIG_TRUE == config_setting_lookup_int(targetConfig, "reconnect-timeout", &timeout)) {
                 loadedConfig.reconnectTimeout = static_cast<unsigned>(timeout);
             }
-            const char* display = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(targetConfig, "display", &display)) {
-                loadedConfig.display = display;
-            }
-            int room = 0;
-            if(CONFIG_TRUE == config_setting_lookup_int(targetConfig, "room", &room)) {
-                loadedConfig.room = room;
-            }
         }
-        config_setting_t* streamerConfig = config_lookup(&config, "streamer");
-        if(streamerConfig && CONFIG_TRUE == config_setting_is_group(streamerConfig)) {
-            const char* test = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "test", &test)) {
-                loadedConfig.streamer.type = StreamerConfig::Type::Test;
-                loadedConfig.streamer.source = test;
-            }
 
-            const char* videocodec = nullptr;
-            if(config_setting_lookup_string(streamerConfig, "videocodec", &videocodec)) {
-                if(0 == strcmp(videocodec, "h264"))
-                    loadedConfig.streamer.videocodec = GstRtStreaming::Videocodec::h264;
-                else if(0 == strcmp(videocodec, "vp8"))
-                    loadedConfig.streamer.videocodec = GstRtStreaming::Videocodec::vp8;
-            }
-
-            const char* pipeline = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "pipeline", &pipeline)) {
-                loadedConfig.streamer.type = StreamerConfig::Type::Pipeline;
-                loadedConfig.streamer.source = pipeline;
-            }
-
-            const char* url = nullptr;
-            if(CONFIG_TRUE == config_setting_lookup_string(streamerConfig, "url", &url)) {
-                loadedConfig.streamer.type = StreamerConfig::Type::ReStreamer;
-                loadedConfig.streamer.source = url;
-            }
-        }
         config_setting_t* debugConfig = config_lookup(&config, "debug");
         if(debugConfig && CONFIG_TRUE == config_setting_is_group(debugConfig)) {
             int logLevel = 0;
@@ -143,41 +105,19 @@ static bool LoadConfig(Config* config)
     return success;
 }
 
-static std::unique_ptr<WebRTCPeer>
-CreatePeer(const Config* config)
-{
-    switch(config->streamer.type) {
-    case StreamerConfig::Type::Test:
-        return
-            std::make_unique<GstTestStreamer>(
-                config->streamer.source,
-                config->streamer.videocodec);
-    case StreamerConfig::Type::Pipeline:
-        return
-            std::make_unique<GstPipelineStreamer>(config->streamer.source);
-    case StreamerConfig::Type::ReStreamer:
-        return
-            std::make_unique<GstReStreamer>(config->streamer.source);
-    default:
-        return
-            std::make_unique<GstTestStreamer>();
-    }
-}
-
 static std::unique_ptr<Session> CreateSession(
     Config* config,
-    const std::function<void (const char*) noexcept>& sendMessage) noexcept
+    const std::function<void (const char*)>& sendMessage)
 {
     return
         std::make_unique<Session>(
             config,
-            std::bind(CreatePeer, config),
             sendMessage);
 }
 
 static void ClientDisconnected(
     const Config* config,
-    WsClient* client) noexcept
+    WsClient* client)
 {
     const unsigned reconnectTimeout =
         config->reconnectTimeout > 0 ?
@@ -210,14 +150,19 @@ int main(int /*argc*/, char** /*argv*/)
     GMainLoopPtr loopPtr(g_main_loop_new(nullptr, FALSE));
     GMainLoop* loop = loopPtr.get();
 
+    const auto createSession = std::bind(
+        CreateSession,
+        &config,
+        std::placeholders::_1);
+    const auto clientDisconnected = std::bind(
+        ClientDisconnected,
+        &config,
+        std::placeholders::_1);
     WsClient client(
         config,
         loop,
-        std::bind(
-            CreateSession,
-            &config,
-            std::placeholders::_1),
-        std::bind(ClientDisconnected, &config, &client));
+        createSession,
+        clientDisconnected);
 
     if(client.init()) {
         client.connect();

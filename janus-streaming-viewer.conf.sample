@@ -1,0 +1,10 @@
+janus: {
+  url: "wss://janus.conf.meetecho.com/ws"
+//url: "wss://janus-legacy.conf.meetecho.com/ws"
+}
+
+debug: {
+  log-level: 5
+#  log-level: 3
+#  lws-log-level: 2
+}

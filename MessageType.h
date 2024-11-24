@@ -4,10 +4,7 @@ enum class MessageType {
     Keepalive,
     CreateSession,
     AttachPlugin,
-    Join,
-    Publish,
-    UnPublish,
-    JoinAndConfigure,
+    Watch,
+    Start,
     Trickle,
-    ListParticipants,
 };
